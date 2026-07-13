@@ -1,0 +1,14 @@
+{
+    "mission_name": "Demo Mission",
+    "commands_executed": 5,
+    "distance_travelled": 223.61,
+    "max_altitude": 20,
+    "battery_used": 10.0,
+    "final_battery": 90.0,
+    "final_altitude": 0.0,
+    "final_position": [
+        0.0,
+        0.0
+    ],
+    "flight_mode": "IDLE"
+}

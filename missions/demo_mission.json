@@ -1,0 +1,24 @@
+{
+    "name": "Demo Mission",
+    "commands": [
+        {
+            "type": "TAKEOFF",
+            "altitude": 20
+        },
+        {
+            "type": "GOTO",
+            "x": 100,
+            "y": 50
+        },
+        {
+            "type": "HOVER",
+            "duration": 5
+        },
+        {
+            "type": "RETURN_HOME"
+        },
+        {
+            "type": "LAND"
+        }
+    ]
+}

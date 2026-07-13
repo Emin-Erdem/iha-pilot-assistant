@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
 from domain.position import Position
+from domain.flight_statistics import FlightStatistics
 from domain.enums import FlightMode
 
 
@@ -12,7 +13,11 @@ class Drone:
 
     position: Position = field(default_factory=lambda: Position(0.0, 0.0))
     home_position: Position = field(default_factory=lambda: Position(0.0, 0.0))
+
     altitude: float = 0.0
     battery_level: float = 100.0
     speed: float = 0.0
+
     mode: FlightMode = FlightMode.IDLE
+
+    statistics: FlightStatistics = field(default_factory=FlightStatistics)

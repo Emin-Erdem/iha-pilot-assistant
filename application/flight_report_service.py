@@ -14,7 +14,13 @@ class FlightReportService:
 
         report = {
             "mission_name": mission.name,
-            "commands_executed": len(mission.commands),
+            "commands_executed": drone.statistics.commands_executed,
+            "distance_travelled": round(
+                drone.statistics.distance_travelled,
+                2
+            ),
+            "max_altitude": drone.statistics.max_altitude,
+            "battery_used": drone.statistics.battery_used,
             "final_battery": drone.battery_level,
             "final_altitude": drone.altitude,
             "final_position": (
