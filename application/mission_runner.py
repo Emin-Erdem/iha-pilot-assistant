@@ -18,9 +18,15 @@ class MissionRunner:
 
     def __init__(self, drone: Drone):
         self.drone = drone
-        self.controller = DroneController(drone)
+
         self.telemetry_service = TelemetryService(drone)
         self.telemetry_history = TelemetryHistory()
+
+        self.controller = DroneController(
+            drone,
+            on_state_change=self._record_telemetry
+        )
+
         self.flight_report_service = FlightReportService()
         self.mission_recorder = MissionRecorder()
 
@@ -31,7 +37,7 @@ class MissionRunner:
     ) -> dict:
         """
         Runs every mission command and records telemetry
-        after each command.
+        whenever the drone state changes.
 
         command_delay defines how many seconds to wait
         between commands.
@@ -41,10 +47,6 @@ class MissionRunner:
 
         for index, command in enumerate(mission.commands):
             self.controller.execute_command(command)
-
-            telemetry = self.telemetry_service.create_snapshot()
-
-            self.telemetry_history.add(telemetry)
 
             is_last_command = (
                 index == len(mission.commands) - 1
@@ -78,3 +80,12 @@ class MissionRunner:
         """
 
         return self.telemetry_history.get_all()
+
+    def _record_telemetry(self) -> None:
+        """
+        Records a telemetry snapshot whenever the drone state changes.
+        """
+
+        telemetry = self.telemetry_service.create_snapshot()
+
+        self.telemetry_history.add(telemetry)

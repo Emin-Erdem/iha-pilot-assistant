@@ -1,3 +1,6 @@
+from time import sleep
+from typing import Callable
+
 from config.settings import Settings
 
 from infrastructure.logger import Logger
@@ -17,14 +20,28 @@ class DroneController:
     Executes validated missions on the drone.
     """
 
-    def __init__(self, drone: Drone):
+    def __init__(
+        self,
+        drone: Drone,
+        on_state_change: Callable[[], None] | None = None,
+        movement_steps: int = 10,
+        movement_step_delay: float = 0.0,
+    ):
         self.drone = drone
         self.logger = Logger()
+
+        self.on_state_change = on_state_change
+        self.movement_steps = max(1, movement_steps)
+        self.movement_step_delay = max(
+            0.0,
+            movement_step_delay
+        )
 
     def execute_mission(self, mission: Mission) -> None:
         """
         Executes all commands in the mission sequentially.
         """
+
         for command in mission.commands:
             self.execute_command(command)
 
@@ -34,34 +51,28 @@ class DroneController:
         """
 
         if command.command_type == CommandType.TAKEOFF:
-
             self.takeoff(
                 command.parameters["altitude"]
             )
 
         elif command.command_type == CommandType.LAND:
-
             self.land()
 
         elif command.command_type == CommandType.GOTO:
-
             self.goto(
                 command.parameters["x"],
                 command.parameters["y"]
             )
 
         elif command.command_type == CommandType.HOVER:
-
             self.hover(
                 command.parameters["duration"]
             )
 
         elif command.command_type == CommandType.RETURN_HOME:
-
             self.return_home()
 
         else:
-
             raise InvalidCommandException(
                 f"Unsupported command: {command.command_type}"
             )
@@ -82,7 +93,8 @@ class DroneController:
         if altitude > Settings.MAX_ALTITUDE:
             raise AltitudeLimitException(
                 f"Requested altitude ({altitude} m) exceeds "
-                f"maximum allowed altitude ({Settings.MAX_ALTITUDE} m)."
+                f"maximum allowed altitude "
+                f"({Settings.MAX_ALTITUDE} m)."
             )
 
         self.drone.mode = FlightMode.TAKING_OFF
@@ -100,7 +112,11 @@ class DroneController:
             Settings.TAKEOFF_BATTERY_USAGE
         )
 
-        self.logger.info(f"Drone took off to {altitude} meters.")
+        self._notify_state_change()
+
+        self.logger.info(
+            f"Drone took off to {altitude} meters."
+        )
 
     def land(self) -> None:
         """
@@ -116,33 +132,33 @@ class DroneController:
             Settings.LAND_BATTERY_USAGE
         )
 
+        self._notify_state_change()
+
         self.logger.info("Drone landed successfully.")
 
     def goto(self, x: float, y: float) -> None:
         """
-        Moves the drone to the target position.
+        Moves the drone gradually to the target position.
         """
 
         self.drone.mode = FlightMode.FLYING
         self.drone.speed = Settings.CRUISE_SPEED
 
-        old_x = self.drone.position.x
-        old_y = self.drone.position.y
-
-        self.drone.position.x = x
-        self.drone.position.y = y
-
-        distance = (
-            ((x - old_x) ** 2 + (y - old_y) ** 2)
-        ) ** 0.5
-
-        self.drone.statistics.distance_travelled += distance
+        self._move_to(
+            target_x=x,
+            target_y=y,
+            flight_mode=FlightMode.FLYING,
+        )
 
         self.update_battery(
             Settings.MOVE_BATTERY_USAGE
         )
 
-        self.logger.info(f"Drone moved to ({x}, {y}).")
+        self._notify_state_change()
+
+        self.logger.info(
+            f"Drone moved to ({x}, {y})."
+        )
 
     def hover(self, duration: int) -> None:
         """
@@ -157,32 +173,27 @@ class DroneController:
             Settings.HOVER_BATTERY_PER_SECOND
         )
 
+        self._notify_state_change()
+
         self.drone.mode = FlightMode.FLYING
 
-        self.logger.info(f"Drone hovered for {duration} seconds.")
+        self.logger.info(
+            f"Drone hovered for {duration} seconds."
+        )
 
     def return_home(self) -> None:
         """
-        Returns the drone to its home position.
+        Returns the drone gradually to its home position.
         """
 
         self.drone.mode = FlightMode.RETURNING_HOME
         self.drone.speed = Settings.CRUISE_SPEED
 
-        old_x = self.drone.position.x
-        old_y = self.drone.position.y
-
-        self.drone.position.x = self.drone.home_position.x
-        self.drone.position.y = self.drone.home_position.y
-
-        distance = (
-            (
-                (self.drone.home_position.x - old_x) ** 2 +
-                (self.drone.home_position.y - old_y) ** 2
-            )
-        ) ** 0.5
-
-        self.drone.statistics.distance_travelled += distance
+        self._move_to(
+            target_x=self.drone.home_position.x,
+            target_y=self.drone.home_position.y,
+            flight_mode=FlightMode.RETURNING_HOME,
+        )
 
         self.update_battery(
             Settings.MOVE_BATTERY_USAGE
@@ -190,16 +201,78 @@ class DroneController:
 
         self.drone.mode = FlightMode.FLYING
 
-        self.logger.info("Drone returned to home position.")
+        self._notify_state_change()
+
+        self.logger.info(
+            "Drone returned to home position."
+        )
+
+    def _move_to(
+        self,
+        target_x: float,
+        target_y: float,
+        flight_mode: FlightMode,
+    ) -> None:
+        """
+        Moves the drone to a destination using small steps.
+        """
+
+        start_x = self.drone.position.x
+        start_y = self.drone.position.y
+
+        delta_x = target_x - start_x
+        delta_y = target_y - start_y
+
+        total_distance = (
+            delta_x ** 2 +
+            delta_y ** 2
+        ) ** 0.5
+
+        self.drone.mode = flight_mode
+
+        for step in range(1, self.movement_steps + 1):
+            progress = step / self.movement_steps
+
+            self.drone.position.x = (
+                start_x + delta_x * progress
+            )
+
+            self.drone.position.y = (
+                start_y + delta_y * progress
+            )
+
+            self._notify_state_change()
+
+            if self.movement_step_delay > 0:
+                sleep(self.movement_step_delay)
+
+        self.drone.statistics.distance_travelled += (
+            total_distance
+        )
+
+    def _notify_state_change(self) -> None:
+        """
+        Notifies the caller after the drone state changes.
+        """
+
+        if self.on_state_change is not None:
+            self.on_state_change()
 
     def update_battery(self, consumption: float) -> None:
         """
         Updates the battery level after an operation.
         """
 
-        self.drone.statistics.battery_used += consumption
+        actual_consumption = min(
+            consumption,
+            self.drone.battery_level
+        )
 
-        self.drone.battery_level -= consumption
+        self.drone.statistics.battery_used += (
+            actual_consumption
+        )
+
+        self.drone.battery_level -= actual_consumption
 
         if self.drone.battery_level < 0:
             self.drone.battery_level = 0
