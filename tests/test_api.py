@@ -206,3 +206,15 @@ def test_missing_command_parameter_returns_422() -> None:
     assert response.json()["detail"] == (
         "Missing command parameter: altitude"
     )
+
+
+def test_websocket_returns_waiting_without_telemetry() -> None:
+    reset_mission_service()
+
+    with client.websocket_connect("/ws/telemetry") as websocket:
+        data = websocket.receive_json()
+
+    assert data == {
+        "status": "waiting",
+        "message": "No telemetry is available yet."
+    }

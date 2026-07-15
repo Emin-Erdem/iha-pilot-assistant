@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 
 from api.schemas import MissionRequest
 from api.services import ApiMissionService
@@ -9,7 +9,7 @@ from exceptions.drone_exception import DroneException
 app = FastAPI(
     title="IHA Pilot Assistant API",
     description="API for the AI-assisted drone mission system.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 mission_service = ApiMissionService()
@@ -97,3 +97,31 @@ def get_latest_report() -> dict:
         )
 
     return report
+
+
+@app.websocket("/ws/telemetry")
+async def telemetry_websocket(websocket: WebSocket) -> None:
+    """
+    Sends the latest telemetry snapshot through a WebSocket connection.
+    """
+
+    await websocket.accept()
+
+    telemetry = mission_service.get_latest_telemetry()
+
+    if telemetry is None:
+        await websocket.send_json(
+            {
+                "status": "waiting",
+                "message": "No telemetry is available yet."
+            }
+        )
+    else:
+        await websocket.send_json(
+            {
+                "status": "connected",
+                "telemetry": telemetry
+            }
+        )
+
+    await websocket.close()
