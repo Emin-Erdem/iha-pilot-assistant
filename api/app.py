@@ -1,4 +1,11 @@
-from fastapi import FastAPI, HTTPException, WebSocket
+import asyncio
+
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from api.schemas import MissionRequest
 from api.services import ApiMissionService
@@ -9,7 +16,7 @@ from exceptions.drone_exception import DroneException
 app = FastAPI(
     title="IHA Pilot Assistant API",
     description="API for the AI-assisted drone mission system.",
-    version="0.3.0",
+    version="0.5.0",
 )
 
 mission_service = ApiMissionService()
@@ -40,7 +47,7 @@ def health_check() -> dict[str, str]:
 @app.post("/missions/run")
 def run_mission(request: MissionRequest) -> dict:
     """
-    Runs a mission received through the API.
+    Runs a mission synchronously.
     """
 
     try:
@@ -63,6 +70,52 @@ def run_mission(request: MissionRequest) -> dict:
             status_code=422,
             detail=f"Missing command parameter: {error.args[0]}"
         ) from error
+
+
+@app.post("/missions/start")
+def start_mission(request: MissionRequest) -> dict:
+    """
+    Starts a mission in the background.
+    """
+
+    try:
+        return mission_service.start_mission(
+            request,
+            command_delay=1.0
+        )
+
+    except DroneException as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    except KeyError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Missing command parameter: {error.args[0]}"
+        ) from error
+
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(error)
+        ) from error
+
+
+@app.get("/missions/status")
+def get_mission_status() -> dict:
+    """
+    Returns the current background mission status.
+    """
+
+    return mission_service.get_status()
 
 
 @app.get("/telemetry")
@@ -100,28 +153,38 @@ def get_latest_report() -> dict:
 
 
 @app.websocket("/ws/telemetry")
-async def telemetry_websocket(websocket: WebSocket) -> None:
+async def telemetry_websocket(
+    websocket: WebSocket
+) -> None:
     """
-    Sends the latest telemetry snapshot through a WebSocket connection.
+    Continuously sends the latest telemetry while the client
+    remains connected.
     """
 
     await websocket.accept()
 
-    telemetry = mission_service.get_latest_telemetry()
+    try:
+        while True:
+            telemetry = mission_service.get_latest_telemetry()
 
-    if telemetry is None:
-        await websocket.send_json(
-            {
-                "status": "waiting",
-                "message": "No telemetry is available yet."
-            }
-        )
-    else:
-        await websocket.send_json(
-            {
-                "status": "connected",
-                "telemetry": telemetry
-            }
-        )
+            if telemetry is None:
+                await websocket.send_json(
+                    {
+                        "status": "waiting",
+                        "message": (
+                            "No telemetry is available yet."
+                        )
+                    }
+                )
+            else:
+                await websocket.send_json(
+                    {
+                        "status": "connected",
+                        "telemetry": telemetry
+                    }
+                )
 
-    await websocket.close()
+            await asyncio.sleep(1)
+
+    except WebSocketDisconnect:
+        return

@@ -1,3 +1,5 @@
+from time import monotonic, sleep
+
 from fastapi.testclient import TestClient
 
 from api.app import app, mission_service
@@ -12,6 +14,22 @@ def reset_mission_service() -> None:
     """
 
     mission_service.reset()
+
+
+def wait_for_mission_to_finish(timeout: float = 5.0) -> None:
+    """
+    Waits until the background mission finishes.
+    """
+
+    start_time = monotonic()
+
+    while mission_service.get_status()["is_running"]:
+        if monotonic() - start_time > timeout:
+            raise AssertionError(
+                "Background mission did not finish in time."
+            )
+
+        sleep(0.05)
 
 
 def test_root_endpoint() -> None:
@@ -218,3 +236,96 @@ def test_websocket_returns_waiting_without_telemetry() -> None:
         "status": "waiting",
         "message": "No telemetry is available yet."
     }
+
+
+def test_start_mission_returns_success() -> None:
+    reset_mission_service()
+
+    mission_payload = {
+        "name": "Background API Mission",
+        "commands": [
+            {
+                "type": "TAKEOFF",
+                "parameters": {
+                    "altitude": 20
+                }
+            },
+            {
+                "type": "RETURN_HOME",
+                "parameters": {}
+            },
+            {
+                "type": "LAND",
+                "parameters": {}
+            }
+        ]
+    }
+
+    response = client.post(
+        "/missions/start",
+        json=mission_payload
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "Mission started.",
+        "mission_name": "Background API Mission",
+        "command_count": 3
+    }
+
+    wait_for_mission_to_finish()
+
+
+def test_mission_status_endpoint() -> None:
+    reset_mission_service()
+
+    mission_payload = {
+        "name": "Status Test Mission",
+        "commands": [
+            {
+                "type": "TAKEOFF",
+                "parameters": {
+                    "altitude": 20
+                }
+            },
+            {
+                "type": "HOVER",
+                "parameters": {
+                    "duration": 2
+                }
+            },
+            {
+                "type": "LAND",
+                "parameters": {}
+            }
+        ]
+    }
+
+    start_response = client.post(
+        "/missions/start",
+        json=mission_payload
+    )
+
+    assert start_response.status_code == 200
+
+    status_response = client.get("/missions/status")
+
+    assert status_response.status_code == 200
+
+    status = status_response.json()
+
+    assert status["is_running"] is True
+    assert status["has_report"] is False
+    assert status["error"] is None
+
+    wait_for_mission_to_finish()
+
+    completed_response = client.get("/missions/status")
+
+    assert completed_response.status_code == 200
+
+    completed_status = completed_response.json()
+
+    assert completed_status["is_running"] is False
+    assert completed_status["has_report"] is True
+    assert completed_status["error"] is None
