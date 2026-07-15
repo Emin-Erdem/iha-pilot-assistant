@@ -8,16 +8,21 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.schemas import MissionRequest
+from api.schemas import (
+    AIMissionRequest,
+    AIMissionResponse,
+    MissionRequest,
+)
 from api.services import ApiMissionService
 
+from application.ai_mission_service import AIMissionService
 from exceptions.drone_exception import DroneException
 
 
 app = FastAPI(
     title="IHA Pilot Assistant API",
     description="API for the AI-assisted drone mission system.",
-    version="0.5.0",
+    version="0.6.0",
 )
 
 app.add_middleware(
@@ -32,6 +37,7 @@ app.add_middleware(
 )
 
 mission_service = ApiMissionService()
+ai_mission_service = AIMissionService()
 
 
 @app.get("/")
@@ -54,6 +60,30 @@ def health_check() -> dict[str, str]:
     return {
         "status": "healthy"
     }
+
+
+@app.post(
+    "/ai/mission",
+    response_model=AIMissionResponse,
+)
+def generate_ai_mission(
+    request: AIMissionRequest,
+) -> AIMissionResponse:
+    """
+    Converts a natural-language instruction into
+    a structured mission plan.
+    """
+
+    try:
+        return ai_mission_service.generate_mission(
+            request
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
 
 @app.post("/missions/run")
@@ -128,6 +158,28 @@ def get_mission_status() -> dict:
     """
 
     return mission_service.get_status()
+
+
+@app.post("/system/reset")
+def reset_system() -> dict[str, str]:
+    """
+    Resets the drone, telemetry, mission state,
+    and latest flight report.
+    """
+
+    try:
+        mission_service.reset()
+
+        return {
+            "status": "reset",
+            "message": "Drone system reset successfully."
+        }
+
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(error)
+        ) from error
 
 
 @app.get("/telemetry")

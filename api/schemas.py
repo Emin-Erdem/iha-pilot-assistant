@@ -10,7 +10,10 @@ class CommandRequest(BaseModel):
 
     type: str = Field(
         ...,
-        description="Command type such as TAKEOFF, GOTO, HOVER, RETURN_HOME or LAND."
+        description=(
+            "Command type such as TAKEOFF, GOTO, "
+            "HOVER, RETURN_HOME or LAND."
+        )
     )
 
     parameters: dict[str, Any] = Field(
@@ -26,6 +29,36 @@ class MissionRequest(BaseModel):
 
     name: str = Field(
         default="API Mission",
+        min_length=1
+    )
+
+    commands: list[CommandRequest] = Field(
+        ...,
+        min_length=1
+    )
+
+
+class AIMissionRequest(BaseModel):
+    """
+    Represents a natural-language mission request.
+    """
+
+    instruction: str = Field(
+        ...,
+        min_length=3,
+        description=(
+            "Natural-language mission instruction."
+        )
+    )
+
+
+class AIMissionResponse(BaseModel):
+    """
+    Represents a generated mission plan.
+    """
+
+    name: str = Field(
+        default="AI Generated Mission",
         min_length=1
     )
 

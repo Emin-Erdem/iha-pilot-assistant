@@ -24,7 +24,9 @@ class MissionRunner:
 
         self.controller = DroneController(
             drone,
-            on_state_change=self._record_telemetry
+            on_state_change=self._record_telemetry,
+            movement_steps=10,
+            movement_step_delay=0.2,
         )
 
         self.flight_report_service = FlightReportService()
