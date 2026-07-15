@@ -329,3 +329,71 @@ def test_mission_status_endpoint() -> None:
     assert completed_status["is_running"] is False
     assert completed_status["has_report"] is True
     assert completed_status["error"] is None
+
+
+def test_generate_ai_mission() -> None:
+    request_payload = {
+        "instruction": (
+            "Take off to 15 meters, "
+            "go to x 40 y 25, "
+            "hover for 3 seconds, "
+            "return home and land."
+        )
+    }
+
+    response = client.post(
+        "/ai/mission",
+        json=request_payload
+    )
+
+    assert response.status_code == 200
+
+    mission = response.json()
+
+    assert mission["name"] == "AI Generated Mission"
+
+    assert mission["commands"] == [
+        {
+            "type": "TAKEOFF",
+            "parameters": {
+                "altitude": 15.0
+            }
+        },
+        {
+            "type": "GOTO",
+            "parameters": {
+                "x": 40.0,
+                "y": 25.0
+            }
+        },
+        {
+            "type": "HOVER",
+            "parameters": {
+                "duration": 3.0
+            }
+        },
+        {
+            "type": "RETURN_HOME",
+            "parameters": {}
+        },
+        {
+            "type": "LAND",
+            "parameters": {}
+        }
+    ]
+
+
+def test_generate_ai_mission_rejects_unknown_instruction() -> None:
+    request_payload = {
+        "instruction": "Do something interesting."
+    }
+
+    response = client.post(
+        "/ai/mission",
+        json=request_payload
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "No supported mission commands were found."
+    )

@@ -1,10 +1,10 @@
 {
-    "mission_name": "Custom Drone Mission",
-    "commands_executed": 5,
-    "distance_travelled": 223.61,
+    "mission_name": "Status Test Mission",
+    "commands_executed": 3,
+    "distance_travelled": 0.0,
     "max_altitude": 20,
-    "battery_used": 10.0,
-    "final_battery": 90.0,
+    "battery_used": 3.4,
+    "final_battery": 96.6,
     "final_altitude": 0.0,
     "final_position": [
         0.0,
