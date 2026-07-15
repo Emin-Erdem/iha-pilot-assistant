@@ -1,7 +1,6 @@
-from application.mission_runner import MissionRunner
+from application.mission_service import MissionService
 
 from domain.command import Command
-from domain.drone import Drone
 from domain.enums import CommandType
 from domain.mission import Mission
 
@@ -10,13 +9,12 @@ from api.schemas import MissionRequest
 
 class ApiMissionService:
     """
-    Converts API requests into domain missions and executes them.
+    Converts API requests into domain missions and delegates
+    mission execution to MissionService.
     """
 
     def __init__(self):
-        self.drone = Drone()
-        self.runner = MissionRunner(self.drone)
-        self.latest_report: dict | None = None
+        self.mission_service = MissionService()
 
     def run_mission(self, request: MissionRequest) -> dict:
         """
@@ -27,10 +25,14 @@ class ApiMissionService:
 
         for command_request in request.commands:
             try:
-                command_type = CommandType[command_request.type.upper()]
+                command_type = CommandType[
+                    command_request.type.upper()
+                ]
+
             except KeyError as error:
                 raise ValueError(
-                    f"Unsupported command type: {command_request.type}"
+                    f"Unsupported command type: "
+                    f"{command_request.type}"
                 ) from error
 
             commands.append(
@@ -45,36 +47,25 @@ class ApiMissionService:
             commands=commands
         )
 
-        report = self.runner.run(mission)
-        self.latest_report = report
-
-        return report
+        return self.mission_service.run(mission)
 
     def get_latest_telemetry(self) -> dict | None:
         """
-        Returns the latest telemetry snapshot as a JSON-compatible dictionary.
+        Returns the latest telemetry snapshot.
         """
 
-        telemetry = self.runner.last_telemetry()
-
-        if telemetry is None:
-            return None
-
-        return {
-            "position": {
-                "x": telemetry.position.x,
-                "y": telemetry.position.y,
-            },
-            "altitude": telemetry.altitude,
-            "battery_level": telemetry.battery_level,
-            "speed": telemetry.speed,
-            "mode": telemetry.mode.value,
-            "timestamp": telemetry.timestamp.isoformat(),
-        }
+        return self.mission_service.get_latest_telemetry()
 
     def get_latest_report(self) -> dict | None:
         """
         Returns the most recently generated flight report.
         """
 
-        return self.latest_report
+        return self.mission_service.get_latest_report()
+
+    def reset(self) -> None:
+        """
+        Resets the drone and mission state.
+        """
+
+        self.mission_service.reset()

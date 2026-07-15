@@ -1,10 +1,10 @@
 {
-    "mission_name": "API Demo Mission",
-    "commands_executed": 15,
-    "distance_travelled": 670.82,
+    "mission_name": "API Test Mission",
+    "commands_executed": 5,
+    "distance_travelled": 223.61,
     "max_altitude": 20,
-    "battery_used": 30.0,
-    "final_battery": 70.0,
+    "battery_used": 10.0,
+    "final_battery": 90.0,
     "final_altitude": 0.0,
     "final_position": [
         0.0,
