@@ -9,20 +9,29 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.schemas import (
+    AICopilotRequest,
+    AICopilotResponse,
     AIMissionRequest,
     AIMissionResponse,
     MissionRequest,
 )
 from api.services import ApiMissionService
 
-from application.ai_mission_service import AIMissionService
+from application.ai_copilot_service import (
+    AICopilotService,
+)
+from application.ai_mission_service import (
+    AIMissionService,
+)
 from exceptions.drone_exception import DroneException
 
 
 app = FastAPI(
     title="IHA Pilot Assistant API",
-    description="API for the AI-assisted drone mission system.",
-    version="0.6.0",
+    description=(
+        "API for the AI-assisted drone mission system."
+    ),
+    version="0.7.0",
 )
 
 app.add_middleware(
@@ -38,6 +47,7 @@ app.add_middleware(
 
 mission_service = ApiMissionService()
 ai_mission_service = AIMissionService()
+ai_copilot_service = AICopilotService()
 
 
 @app.get("/")
@@ -47,7 +57,9 @@ def read_root() -> dict[str, str]:
     """
 
     return {
-        "message": "IHA Pilot Assistant API is running."
+        "message": (
+            "IHA Pilot Assistant API is running."
+        )
     }
 
 
@@ -86,36 +98,78 @@ def generate_ai_mission(
         ) from error
 
 
+@app.post(
+    "/ai/copilot",
+    response_model=AICopilotResponse,
+)
+def ask_ai_copilot(
+    request: AICopilotRequest,
+) -> AICopilotResponse:
+    """
+    Answers a Turkish pilot question using the
+    provided telemetry, mission and report context.
+    """
+
+    try:
+        return ai_copilot_service.answer_question(
+            request
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Yapay zekâ uçuş asistanı şu anda "
+                "kullanılamıyor."
+            ),
+        ) from error
+
+
 @app.post("/missions/run")
-def run_mission(request: MissionRequest) -> dict:
+def run_mission(
+    request: MissionRequest,
+) -> dict:
     """
     Runs a mission synchronously.
     """
 
     try:
-        return mission_service.run_mission(request)
+        return mission_service.run_mission(
+            request
+        )
 
     except DroneException as error:
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
     except ValueError as error:
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
     except KeyError as error:
         raise HTTPException(
             status_code=422,
-            detail=f"Missing command parameter: {error.args[0]}"
+            detail=(
+                "Missing command parameter: "
+                f"{error.args[0]}"
+            ),
         ) from error
 
 
 @app.post("/missions/start")
-def start_mission(request: MissionRequest) -> dict:
+def start_mission(
+    request: MissionRequest,
+) -> dict:
     """
     Starts a mission in the background.
     """
@@ -123,31 +177,34 @@ def start_mission(request: MissionRequest) -> dict:
     try:
         return mission_service.start_mission(
             request,
-            command_delay=1.0
+            command_delay=1.0,
         )
 
     except DroneException as error:
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
     except ValueError as error:
         raise HTTPException(
             status_code=400,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
     except KeyError as error:
         raise HTTPException(
             status_code=422,
-            detail=f"Missing command parameter: {error.args[0]}"
+            detail=(
+                "Missing command parameter: "
+                f"{error.args[0]}"
+            ),
         ) from error
 
     except RuntimeError as error:
         raise HTTPException(
             status_code=409,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -172,13 +229,15 @@ def reset_system() -> dict[str, str]:
 
         return {
             "status": "reset",
-            "message": "Drone system reset successfully."
+            "message": (
+                "Drone system reset successfully."
+            ),
         }
 
     except RuntimeError as error:
         raise HTTPException(
             status_code=409,
-            detail=str(error)
+            detail=str(error),
         ) from error
 
 
@@ -188,12 +247,16 @@ def get_telemetry() -> dict:
     Returns the latest telemetry snapshot.
     """
 
-    telemetry = mission_service.get_latest_telemetry()
+    telemetry = (
+        mission_service.get_latest_telemetry()
+    )
 
     if telemetry is None:
         raise HTTPException(
             status_code=404,
-            detail="No telemetry is available yet."
+            detail=(
+                "No telemetry is available yet."
+            ),
         )
 
     return telemetry
@@ -205,12 +268,16 @@ def get_latest_report() -> dict:
     Returns the latest flight report.
     """
 
-    report = mission_service.get_latest_report()
+    report = (
+        mission_service.get_latest_report()
+    )
 
     if report is None:
         raise HTTPException(
             status_code=404,
-            detail="No flight report is available yet."
+            detail=(
+                "No flight report is available yet."
+            ),
         )
 
     return report
@@ -218,33 +285,37 @@ def get_latest_report() -> dict:
 
 @app.websocket("/ws/telemetry")
 async def telemetry_websocket(
-    websocket: WebSocket
+    websocket: WebSocket,
 ) -> None:
     """
-    Continuously sends the latest telemetry while the client
-    remains connected.
+    Continuously sends the latest telemetry while
+    the client remains connected.
     """
 
     await websocket.accept()
 
     try:
         while True:
-            telemetry = mission_service.get_latest_telemetry()
+            telemetry = (
+                mission_service
+                .get_latest_telemetry()
+            )
 
             if telemetry is None:
                 await websocket.send_json(
                     {
                         "status": "waiting",
                         "message": (
-                            "No telemetry is available yet."
-                        )
+                            "No telemetry is "
+                            "available yet."
+                        ),
                     }
                 )
             else:
                 await websocket.send_json(
                     {
                         "status": "connected",
-                        "telemetry": telemetry
+                        "telemetry": telemetry,
                     }
                 )
 
