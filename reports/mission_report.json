@@ -1,10 +1,10 @@
 {
-    "mission_name": "Custom Drone Mission",
-    "commands_executed": 5,
-    "distance_travelled": 223.61,
+    "mission_name": "İki Nokta Görevi",
+    "commands_executed": 40,
+    "distance_travelled": 1984.2,
     "max_altitude": 20,
-    "battery_used": 10.0,
-    "final_battery": 90.0,
+    "battery_used": 92.0,
+    "final_battery": 8.0,
     "final_altitude": 0.0,
     "final_position": [
         0.0,

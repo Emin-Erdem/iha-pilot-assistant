@@ -1,0 +1,126 @@
+@media (max-width: 900px) {
+  .dashboard-cards-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .timeline-values {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .mission-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .reset-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard {
+    width: min(100% - 24px, 1180px);
+    padding-top: 28px;
+  }
+
+  .dashboard-header {
+    margin-bottom: 24px;
+  }
+
+  .dashboard-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mission-section,
+  .mission-editor-section,
+  .drone-map-section,
+  .charts-section,
+  .report-section,
+  .timeline-section {
+    margin-top: 32px;
+    padding: 20px 16px;
+  }
+
+  .ai-mission-header,
+  .mission-editor-header,
+  .drone-map-header,
+  .charts-header,
+  .report-header,
+  .timeline-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-mission-examples {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ai-mission-examples button {
+    width: 100%;
+  }
+
+  .command-item {
+    grid-template-columns: 1fr;
+  }
+
+  .command-number {
+    width: 34px;
+    height: 34px;
+  }
+
+  .command-content {
+    grid-template-columns: 1fr;
+  }
+
+  .remove-command-button {
+    grid-column: auto;
+    width: 100%;
+  }
+
+  .map-legend {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chart-card {
+    padding: 16px 10px 12px;
+  }
+
+  .chart-container {
+    min-height: 240px;
+  }
+
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-values {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-item {
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+  }
+
+  .timeline-marker {
+    width: 34px;
+    height: 34px;
+  }
+
+  .timeline-list::before {
+    left: 17px;
+  }
+}

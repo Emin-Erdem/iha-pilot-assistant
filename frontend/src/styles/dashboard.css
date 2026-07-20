@@ -1,0 +1,39 @@
+.dashboard {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 48px 0 64px;
+}
+
+.dashboard-header {
+  margin-bottom: 32px;
+}
+
+.dashboard-kicker {
+  display: inline-flex;
+  margin: 0 0 14px;
+  padding: 7px 12px;
+  border: 1px solid rgba(87, 164, 255, 0.35);
+  border-radius: 999px;
+  color: #79b8ff;
+  background: rgba(47, 121, 208, 0.12);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.dashboard h1 {
+  margin: 0;
+  color: #f8fbff;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.error-message {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 111, 125, 0.35);
+  border-radius: 12px;
+  color: #ffb8c0;
+  background: rgba(150, 33, 51, 0.16);
+}
